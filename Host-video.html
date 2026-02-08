@@ -3,88 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ভিডিও হোস্টিং সিস্টেম</title>
+    <title>Video Host & URL Generator</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
-        input[type="file"] { margin: 20px 0; }
-        #uploadBtn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        #uploadBtn:disabled { background: #ccc; }
-        #result { margin-top: 20px; word-break: break-all; }
-        .link-box { background: #e9ecef; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-top: 10px; display: none; }
-        .loader { display: none; color: #555; margin-bottom: 10px; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; color: #fff;
+        }
+        .container { 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            width: 90%; max-width: 450px; text-align: center; color: #333;
+        }
+        h2 { color: #4a148c; margin-top: 0; }
+        .upload-area {
+            border: 2px dashed #764ba2;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            background: #f9f9f9;
+        }
+        input[type="file"] { margin: 10px 0; width: 100%; }
+        button { 
+            background: #6e8efb; color: white; border: none; 
+            padding: 15px 25px; border-radius: 10px; cursor: pointer; 
+            font-size: 16px; width: 100%; font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        button:hover { background: #4a148c; transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #status { margin-top: 15px; font-size: 14px; color: #555; }
+        
+        #resultBox { 
+            margin-top: 25px; padding: 15px; background: #e8f5e9; 
+            border-left: 5px solid #2e7d32; border-radius: 8px; 
+            display: none; text-align: left;
+        }
+        .url-text { 
+            color: #1565c0; font-size: 13px; word-break: break-all; 
+            display: block; margin: 10px 0; padding: 10px;
+            background: #fff; border: 1px solid #ddd; border-radius: 5px;
+        }
+        .copy-btn { 
+            background: #2e7d32; padding: 8px; font-size: 12px; margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>ভিডিও আপলোড করুন</h2>
-    <p>ফাইল সিলেক্ট করে অনলাইনে লিঙ্ক তৈরি করুন</p>
+<div class="container">
+    <h2>Video Host 🚀</h2>
+    <p>আপনার ভিডিওর জন্য স্থায়ী লিঙ্ক তৈরি করুন</p>
     
-    <input type="file" id="videoFile" accept="video/mp4">
-    <br>
-    <div id="loader" class="loader">আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...</div>
-    <button id="uploadBtn">Submit & Host</button>
+    <div class="upload-area">
+        <input type="file" id="videoInput" accept="video/mp4,video/x-m4v,video/*">
+    </div>
 
-    <div id="result">
-        <p id="msg"></p>
-        <div id="linkBox" class="link-box">
-            <strong>আপনার ভিডিও লিঙ্ক:</strong><br>
-            <a id="videoUrl" href="#" target="_blank">লিঙ্কটি এখানে দেখুন</a>
-        </div>
+    <button id="submitBtn">Submit & Generate URL</button>
+
+    <div id="status">ফাইল সিলেক্ট করে সাবমিট দিন</div>
+
+    <div id="resultBox">
+        <strong style="color: #2e7d32;">✅ আপলোড সফল হয়েছে!</strong>
+        <span id="videoLink" class="url-text"></span>
+        <button class="copy-btn" onclick="copyLink()">Copy URL</button>
     </div>
 </div>
 
 <script>
-    const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/video/upload';
-    const UPLOAD_PRESET = 'YOUR_PRESET_NAME'; // Cloudinary থেকে পাওয়া নাম
+    // আপনার দেওয়া Cloudinary তথ্য
+    const CLOUD_NAME = "dxdzuhzvo";
+    const API_KEY = "368586924613598";
+    
+    // মনে রাখবেন: Cloudinary Settings -> Upload -> 'Unsigned uploading' ইনেবল করে একটি Preset নাম এখানে দিতে হবে।
+    // বর্তমানে আমি 'ml_default' দিচ্ছি, যদি এটি কাজ না করে তবে আপনার ড্যাশবোর্ড থেকে Preset নাম দিন।
+    const UPLOAD_PRESET = "ml_default"; 
 
-    const uploadBtn = document.getElementById('uploadBtn');
-    const videoFile = document.getElementById('videoFile');
-    const loader = document.getElementById('loader');
-    const linkBox = document.getElementById('linkBox');
-    const videoUrl = document.getElementById('videoUrl');
+    const videoInput = document.getElementById('videoInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const status = document.getElementById('status');
+    const resultBox = document.getElementById('resultBox');
+    const videoLink = document.getElementById('videoLink');
 
-    uploadBtn.addEventListener('click', () => {
-        const file = videoFile.files[0];
+    submitBtn.addEventListener('click', async () => {
+        const file = videoInput.files[0];
         if (!file) {
-            alert("দয়া করে আগে একটি ভিডিও সিলেক্ট করুন!");
+            alert("দয়া করে একটি ভিডিও ফাইল সিলেক্ট করুন!");
             return;
         }
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', UPLOAD_PRESET);
+        formData.append('api_key', API_KEY);
 
-        // UI আপডেট
-        loader.style.display = 'block';
-        uploadBtn.disabled = true;
+        status.innerHTML = "⏳ আপলোড হচ্ছে... ফাইল বড় হলে সময় লাগতে পারে।";
+        submitBtn.disabled = true;
+        resultBox.style.display = "none";
 
-        fetch(CLOUDINARY_URL, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            loader.style.display = 'none';
-            uploadBtn.disabled = false;
-            
+        try {
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/video/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
             if (data.secure_url) {
-                linkBox.style.display = 'block';
-                videoUrl.href = data.secure_url;
-                videoUrl.innerText = data.secure_url;
-                alert("সফলভাবে হোস্ট করা হয়েছে!");
+                status.innerText = "সম্পন্ন!";
+                resultBox.style.display = "block";
+                videoLink.innerText = data.secure_url;
             } else {
-                alert("আপলোড ব্যর্থ হয়েছে। দয়া করে সেটিংস চেক করুন।");
+                status.innerText = "❌ ত্রুটি: আপলোড হয়নি। আপনার 'Upload Preset' চেক করুন।";
+                console.error(data);
             }
-        })
-        .catch(err => {
-            console.error(err);
-            loader.style.display = 'none';
-            uploadBtn.disabled = false;
-            alert("সার্ভার ত্রুটি!");
-        });
+        } catch (error) {
+            status.innerText = "❌ নেটওয়ার্ক এরর!";
+            console.error(error);
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
+
+    function copyLink() {
+        const link = videoLink.innerText;
+        navigator.clipboard.writeText(link).then(() => {
+            alert("লিঙ্ক কপি করা হয়েছে!");
+        });
+    }
 </script>
 
 </body>
