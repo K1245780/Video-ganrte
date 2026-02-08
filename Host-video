@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ভিডিও হোস্টিং সিস্টেম</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        input[type="file"] { margin: 20px 0; }
+        #uploadBtn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        #uploadBtn:disabled { background: #ccc; }
+        #result { margin-top: 20px; word-break: break-all; }
+        .link-box { background: #e9ecef; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-top: 10px; display: none; }
+        .loader { display: none; color: #555; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>ভিডিও আপলোড করুন</h2>
+    <p>ফাইল সিলেক্ট করে অনলাইনে লিঙ্ক তৈরি করুন</p>
+    
+    <input type="file" id="videoFile" accept="video/mp4">
+    <br>
+    <div id="loader" class="loader">আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...</div>
+    <button id="uploadBtn">Submit & Host</button>
+
+    <div id="result">
+        <p id="msg"></p>
+        <div id="linkBox" class="link-box">
+            <strong>আপনার ভিডিও লিঙ্ক:</strong><br>
+            <a id="videoUrl" href="#" target="_blank">লিঙ্কটি এখানে দেখুন</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/video/upload';
+    const UPLOAD_PRESET = 'YOUR_PRESET_NAME'; // Cloudinary থেকে পাওয়া নাম
+
+    const uploadBtn = document.getElementById('uploadBtn');
+    const videoFile = document.getElementById('videoFile');
+    const loader = document.getElementById('loader');
+    const linkBox = document.getElementById('linkBox');
+    const videoUrl = document.getElementById('videoUrl');
+
+    uploadBtn.addEventListener('click', () => {
+        const file = videoFile.files[0];
+        if (!file) {
+            alert("দয়া করে আগে একটি ভিডিও সিলেক্ট করুন!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', UPLOAD_PRESET);
+
+        // UI আপডেট
+        loader.style.display = 'block';
+        uploadBtn.disabled = true;
+
+        fetch(CLOUDINARY_URL, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            loader.style.display = 'none';
+            uploadBtn.disabled = false;
+            
+            if (data.secure_url) {
+                linkBox.style.display = 'block';
+                videoUrl.href = data.secure_url;
+                videoUrl.innerText = data.secure_url;
+                alert("সফলভাবে হোস্ট করা হয়েছে!");
+            } else {
+                alert("আপলোড ব্যর্থ হয়েছে। দয়া করে সেটিংস চেক করুন।");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            loader.style.display = 'none';
+            uploadBtn.disabled = false;
+            alert("সার্ভার ত্রুটি!");
+        });
+    });
+</script>
+
+</body>
+</html>
